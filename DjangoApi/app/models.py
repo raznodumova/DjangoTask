@@ -4,9 +4,9 @@ from django.contrib.auth.models import User
 
 class Task(models.Model):
     STATUS_CHOICES = [
-        ('New', 'Новая'),
-        ('In progress', 'В процессе'),
-        ('Completed', 'Завершена'),
+        ('new', 'New'),
+        ('in_progress', 'In progress'),
+        ('completed', 'Completed'),
     ]
 
     title = models.CharField(max_length=100)

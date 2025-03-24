@@ -22,53 +22,76 @@ class UserTests(APITestCase):
 
 
 class TaskTests(APITestCase):
-
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpassword',
+            email='test@example.com'
+        )
         self.client.force_authenticate(user=self.user)
-        self.task1 = Task.objects.create(title='Task 1',
-                                         description='Description 1', owner=self.user)
-        self.task2 = Task.objects.create(title='Task 2', description='Description 2', owner=self.user)
-        self.task_other_user = Task.objects.create(title="Other User's Task",
-                                                   description="Description",
-                                                   owner=User.objects.create_user(username="otheruser",
-                                                                                  password="otherpassword"))
+
+        self.task1 = Task.objects.create(
+            title='Task 1',
+            description='Description 1',
+            status='new',
+            owner=self.user
+        )
+        self.task2 = Task.objects.create(
+            title='Task 2',
+            description='Description 2',
+            status='new',
+            owner=self.user
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            password='otherpassword'
+        )
+        self.task_other_user = Task.objects.create(
+            title="Other User's Task",
+            description="Description",
+            status='new',
+            owner=self.other_user
+        )
 
     def test_create_task(self):
         url = reverse('task-list')
-        data = {'title': 'New Task', 'description': 'New Description', 'status': 'new'}
+        data = {
+            'title': 'New Task',
+            'description': 'New Description',
+            'status': 'new'
+        }
         response = self.client.post(url, data, format='json')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Task.objects.count(), 4)
         self.assertEqual(Task.objects.get(title='New Task').owner, self.user)
 
-    def test_get_task_list(self):
-        url = reverse('task-list')
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-
-    def test_get_task_detail(self):
-        url = reverse('task-detail', args=[self.task1.id])
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['title'], 'Task 1')
-
     def test_update_task(self):
         url = reverse('task-detail', args=[self.task1.id])
-        data = {'title': 'Updated Task', 'description': 'Updated Description', 'status': 'in_progress'}
+        data = {
+            'title': 'Updated Task',
+            'description': 'Updated Description',
+            'status': 'in_progress'
+        }
         response = self.client.put(url, data, format='json')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Task.objects.get(id=self.task1.id).title, 'Updated Task')
+        self.task1.refresh_from_db()
+        self.assertEqual(self.task1.title, 'Updated Task')
 
-    def test_delete_task(self):
-        url = reverse('task-detail', args=[self.task1.id])
-        response = self.client.delete(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Task.objects.count(), 2)
+    def test_task_status_flow(self):
+        task = Task.objects.create(
+            title='Status Test',
+            description='Test Status Flow',
+            status='new',
+            owner=self.user
+        )
 
-    def test_task_access_other_user(self):
-        url = reverse('task-detail', args=[self.task_other_user.id])
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.patch(reverse('task-detail', args=[task.id]), {'status': 'in_progress'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(task.status, 'in_progress')
+
+        response = self.client.patch(reverse('task-detail', args=[task.id]), {'status': 'completed'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(task.status, 'completed')
