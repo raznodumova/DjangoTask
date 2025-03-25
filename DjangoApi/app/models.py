@@ -3,6 +3,12 @@ from django.contrib.auth.models import User
 
 
 class Task(models.Model):
+    """Модель задачи.
+    Атрибуты:
+        title - название задачи;
+        description - описание задачи;
+        status - статус задачи;
+        owner - владелец задачи."""
     STATUS_CHOICES = [
         ('new', 'New'),
         ('in_progress', 'In progress'),
@@ -16,4 +22,5 @@ class Task(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
+        """Возвращает название задачи."""
         return self.title

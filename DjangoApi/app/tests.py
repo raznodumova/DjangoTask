@@ -6,13 +6,16 @@ from .models import Task
 
 
 class UserTests(APITestCase):
+    """Тесты для модели пользователя."""
 
     def setUp(self):
+        """Создание пользователя."""
         self.client = APIClient()
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.user2 = User.objects.create_user(username='testuser2', password='testpassword2')
 
     def test_create_user(self):
+        """Тест создания пользователя."""
         url = reverse('user-create')
         data = {'username': 'newuser', 'password': 'newpassword', 'email': 'test@test.com'}
         response = self.client.post(url, data, format='json')
@@ -22,7 +25,9 @@ class UserTests(APITestCase):
 
 
 class TaskTests(APITestCase):
+    """Тесты для модели задач."""
     def setUp(self):
+        """Создание пользователя и задачи."""
         self.client = APIClient()
         self.user = User.objects.create_user(
             username='testuser',
@@ -55,6 +60,7 @@ class TaskTests(APITestCase):
         )
 
     def test_create_task(self):
+        """Тест создания задачи."""
         url = reverse('task-list')
         data = {
             'title': 'New Task',
@@ -68,6 +74,7 @@ class TaskTests(APITestCase):
         self.assertEqual(Task.objects.get(title='New Task').owner, self.user)
 
     def test_update_task(self):
+        """Тест обновления задачи."""
         url = reverse('task-detail', args=[self.task1.id])
         data = {
             'title': 'Updated Task',
@@ -81,6 +88,7 @@ class TaskTests(APITestCase):
         self.assertEqual(self.task1.title, 'Updated Task')
 
     def test_task_status_flow(self):
+        """Тест процесса выполнения задачи."""
         task = Task.objects.create(
             title='Status Test',
             description='Test Status Flow',
