@@ -87,6 +87,14 @@ class TaskTests(APITestCase):
         self.task1.refresh_from_db()
         self.assertEqual(self.task1.title, 'Updated Task')
 
+    def test_delete_task(self):
+        """Тест удаления задачи."""
+        url = reverse('task-detail', args=[self.task1.id])
+        response = self.client.delete(url)
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Task.objects.count(), 2)
+
     def test_task_status_flow(self):
         """Тест процесса выполнения задачи."""
         task = Task.objects.create(
@@ -103,3 +111,18 @@ class TaskTests(APITestCase):
         response = self.client.patch(reverse('task-detail', args=[task.id]), {'status': 'completed'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(task.status, 'completed')
+
+    def test_list_tasks(self):
+        """Тест получения списка задач."""
+        url = reverse('task-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+    def get_another_user_tasks(self):
+        """Тест получения списка задач другого пользователя."""
+        url = reverse('task-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
