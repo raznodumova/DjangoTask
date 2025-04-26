@@ -144,15 +144,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_SCHEMA_CLASS': [
-        'rest_framework.schemas.openapi.AutoSchema',
-    ],
-    'EXCEPTION_HANDLER': [
-        'rest_framework.views.exception_handler',
-    ],
-    'NON_FIELD_ERRORS_KEY': [
-        'error',
-    ],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema',
+    'NON_FIELD_ERRORS_KEY': 'error',
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
@@ -176,7 +169,7 @@ SIMPLE_JWT = {
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {
-            'type': 'apiKey',
+            'type': 'oauth2',
             'name': 'Authorization',
             'in': 'header'
         }

@@ -10,6 +10,7 @@ class TaskSet(ModelViewSet):
     serializer_class = TaskSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    queryset = Task.objects.none()
 
     def get_queryset(self):
         return Task.objects.filter(owner=self.request.user)
