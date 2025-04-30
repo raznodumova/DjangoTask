@@ -1,3 +1,7 @@
+"""
+Админка DjangoApi.
+"""
+
 from django.contrib import admin
 from .models import User, Task
 

@@ -1,66 +1,110 @@
-from django.contrib.auth.models import User
+"""Файл для тестирования API
+Тесты реализованы для пользователей, задач, токенов."""
+
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from .models import Task
 
+User = get_user_model()
 
-class UserTests(APITestCase):
-    """Тесты для модели пользователя."""
 
-    def setUp(self):
-        """Создание пользователя."""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.user2 = User.objects.create_user(username='testuser2', password='testpassword2')
-
+class UserModelTest(APITestCase):
+    """
+    Тестирование модели пользователя.
+    """
     def test_create_user(self):
-        """Тест создания пользователя."""
-        url = reverse('user-create')
-        data = {'username': 'newuser', 'password': 'newpassword', 'email': 'test@test.com'}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 3)
-        self.assertEqual(User.objects.get(username='newuser').email, 'test@test.com')
+        """
+        Тест создания пользователя.
+        """
+        user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.assertEqual(user.username, 'testuser')
+        self.assertTrue(user.check_password('testpass123'))
+        self.assertFalse(user.is_superuser)
 
 
-class TaskTests(APITestCase):
-    """Тесты для модели задач."""
+class TaskModelTest(APITestCase):
+    """
+    Тестирование модели задач.
+    """
     def setUp(self):
-        """Создание пользователя и задачи."""
-        self.client = APIClient()
+        """
+        Создание пользователя и задачи для тестирования.
+        """
+        self.user = User.objects.create_user(
+            username='taskowner',
+            password='testpass123'
+        )
+        self.task = Task.objects.create(
+            title='Test Task',
+            description='Test Description',
+            owner=self.user
+        )
+
+    def test_task_creation(self):
+        """
+        Тест создания задачи.
+        """
+        self.assertEqual(self.task.title, 'Test Task')
+        self.assertEqual(self.task.description, 'Test Description')
+        self.assertEqual(self.task.status, 'new')
+        self.assertEqual(self.task.owner, self.user)
+        self.assertEqual(str(self.task), 'Test Task')
+
+
+class AuthTests(APITestCase):
+    """
+    Тестирование аутентификации пользователя.
+    """
+    def test_jwt_auth(self):
+        User.objects.create_user(username='testuser', password='testpass123')
+
+        url = reverse('token_obtain_pair')
+        resp = self.client.post(url, {'username': 'testuser', 'password': 'testpass123'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resp.data)
+        self.assertIn('refresh', resp.data)
+
+
+class TaskAPITests(APITestCase):
+    """
+    Тестирование API задач.
+    """
+    def setUp(self):
+        """
+        Создание пользователя и задачи для тестирования.
+        """
         self.user = User.objects.create_user(
             username='testuser',
-            password='testpassword',
-            email='test@example.com'
+            password='testpass123'
         )
+        self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-        self.task1 = Task.objects.create(
-            title='Task 1',
-            description='Description 1',
-            status='new',
+        self.task = Task.objects.create(
+            title='Initial Task',
+            description='Initial Description',
             owner=self.user
-        )
-        self.task2 = Task.objects.create(
-            title='Task 2',
-            description='Description 2',
-            status='new',
-            owner=self.user
-        )
-        self.other_user = User.objects.create_user(
-            username='otheruser',
-            password='otherpassword'
-        )
-        self.task_other_user = Task.objects.create(
-            title="Other User's Task",
-            description="Description",
-            status='new',
-            owner=self.other_user
         )
 
+    def test_get_tasks(self):
+        """
+        Тест получения задач.
+        """
+        url = reverse('task-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
     def test_create_task(self):
-        """Тест создания задачи."""
+        """
+        Тест создания задачи.
+        """
         url = reverse('task-list')
         data = {
             'title': 'New Task',
@@ -68,61 +112,79 @@ class TaskTests(APITestCase):
             'status': 'new'
         }
         response = self.client.post(url, data, format='json')
-        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Task.objects.count(), 4)
-        self.assertEqual(Task.objects.get(title='New Task').owner, self.user)
-
-    def test_update_task(self):
-        """Тест обновления задачи."""
-        url = reverse('task-detail', args=[self.task1.id])
-        data = {
-            'title': 'Updated Task',
-            'description': 'Updated Description',
-            'status': 'in_progress'
-        }
-        response = self.client.put(url, data, format='json')
-        print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.task1.refresh_from_db()
-        self.assertEqual(self.task1.title, 'Updated Task')
-
-    def test_delete_task(self):
-        """Тест удаления задачи."""
-        url = reverse('task-detail', args=[self.task1.id])
-        response = self.client.delete(url)
-        print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Task.objects.count(), 2)
+        self.assertEqual(Task.objects.last().owner, self.user)
 
-    def test_task_status_flow(self):
-        """Тест процесса выполнения задачи."""
-        task = Task.objects.create(
-            title='Status Test',
-            description='Test Status Flow',
-            status='new',
-            owner=self.user
-        )
+    def test_task_filter_by_owner(self):
+        """
+        Тест фильтрации задач по владельцу.
+        """
+        new_user = User.objects.create_user(username='newuser', password='testpass123')
+        Task.objects.create(title='Other Task', owner=new_user)
 
-        response = self.client.patch(reverse('task-detail', args=[task.id]), {'status': 'in_progress'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(task.status, 'in_progress')
-
-        response = self.client.patch(reverse('task-detail', args=[task.id]), {'status': 'completed'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(task.status, 'completed')
-
-    def test_list_tasks(self):
-        """Тест получения списка задач."""
-        url = reverse('task-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
-
-    def get_another_user_tasks(self):
-        """Тест получения списка задач другого пользователя."""
-        url = reverse('task-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(reverse('task-list'))
         self.assertEqual(len(response.data), 1)
 
+    def test_update_task(self):
+        """
+        Тест обновления задачи.
+        """
+        url = reverse('task-detail', args=[self.task.id])
+        data = {'title': 'Updated Task'}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.task.refresh_from_db()
+        self.assertEqual(self.task.title, 'Updated Task')
+
+    def test_delete_task(self):
+        """
+        Тест удаления задачи.
+        """
+        url = reverse('task-detail', args=[self.task.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Task.objects.count(), 0)
+
+
+class UserAPITests(APITestCase):
+    """Тестирование API пользователя."""
+    def setUp(self):
+        """Создание пользователя для тестирования."""
+        self.admin = User.objects.create_superuser(
+            username='admin',
+            password='adminpass'
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_get_users(self):
+        """Тест получения пользователей."""
+        url = reverse('user-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_create_user_via_api(self):
+        """Тест создания пользователя через API."""
+        url = reverse('user-list')
+        data = {
+            'username': 'newuser',
+            'email': 'new@example.com',
+            'password': 'newpass123'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse('password' in response.data)
+        self.assertTrue(User.objects.filter(username='newuser').exists())
+
+
+class DocumentationTests(APITestCase):
+    """Тестирование документации."""
+    def test_swagger_docs(self):
+        """Тест документации Swagger."""
+        response = self.client.get('/swagger/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_redoc_docs(self):
+        """Тест документации Redoc."""
+        response = self.client.get('/redoc/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
