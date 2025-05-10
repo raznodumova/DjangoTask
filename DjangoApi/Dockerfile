@@ -1,13 +1,21 @@
-FROM python:3.11-slim # версия python
+# Версия python
+FROM python:3.11-slim
 
-WORKDIR /app # рабочая директория
+# Установка Poetry
+RUN pip install --no-cache-dir poetry==1.7.0
 
-COPY requirements.txt . # копирование зависимостей в корневую директорию
+WORKDIR /app
 
-COPY . . # копирование всех данных из одной директории в другую
+# Копируем ТОЛЬКО файлы зависимостей
+COPY pyproject.toml poetry.lock ./
 
-RUN pip install --no-cache-dir -r requirements.txt # запуск установки зависимостей
+# Устанавливаем зависимости
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi
 
-EXPOSE 8000 # использование восмитысячного порта
+# Копируем весь проект
+COPY . .
 
-CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"] # запуск миграций и сервера
+EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
