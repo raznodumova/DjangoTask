@@ -1,15 +1,15 @@
 """
-URL-конфигурация для DjangoApi.
+Основная URL-конфигурация проекта DjangoApi.
 
-Схема URL-адресов:
-admin/ - админка
+Содержит только:
+- Маршрут к админ-панели Django
+- Подключение всех URL-ов приложения app
 """
+
 from django.contrib import admin
 from django.urls import path, include
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-
     path('', include('app.urls')),
 ]

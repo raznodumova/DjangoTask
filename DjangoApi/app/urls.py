@@ -1,13 +1,10 @@
 """
-URLs для DjangoApi.
+URL-конфигурация приложения app.
 
-Схема URL-адресов:
-api/ - API
-api/token/ - токены
-api/token/refresh/ - обновление токена
-
-swagger/ - документация API
-redoc/ - документация API
+Включает:
+- API эндпоинты для задач и пользователей
+- JWT аутентификацию
+- Документацию Swagger/Redoc
 """
 
 from django.urls import path, include
@@ -17,10 +14,18 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from DjangoApi.yasg import schema_view
 from .api import TaskSet, UserSet
 
+
+"""
+Регистрация роутеров для задач и пользователей.
+"""
 router = DefaultRouter()
 router.register(r'tasks', TaskSet, basename='task')
 router.register(r'users', UserSet, basename='user')
 
+
+"""
+URL-конфигурация приложения app.
+"""
 urlpatterns = [
     path('api/', include(router.urls)),
 
