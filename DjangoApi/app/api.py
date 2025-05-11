@@ -43,6 +43,9 @@ class TaskSet(ModelViewSet):
 
         Переопределяет базовую реализацию для обеспечения безопасности данных.
         Пользователь видит только свои задачи."""
+        if getattr(self, 'swagger_fake_view', False):
+            # Для генерации схемы Swagger
+            return Task.objects.none()
         return Task.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
